@@ -1,0 +1,64 @@
+{
+  "query": {
+    "type": "group",
+    "logical_operator": "and",
+    "nodes": [
+      {
+        "type": "terminal",
+        "service": "text",
+        "parameters": {
+          "attribute": "entity_poly.rcsb_entity_polymer_type",
+          "operator": "exact_match",
+          "value": "RNA"
+        }
+      },
+      {
+        "type": "group",
+        "logical_operator": "and",
+        "nodes": [
+          {
+            "type": "terminal",
+            "service": "text",
+            "parameters": {
+              "attribute": "rcsb_entry_info.polymer_entity_count_RNA",
+              "operator": "greater",
+              "value": 0
+            }
+          },
+          {
+            "type": "terminal",
+            "service": "text",
+            "parameters": {
+              "attribute": "rcsb_entry_info.polymer_entity_count_protein",
+              "operator": "equals",
+              "value": 0
+            }
+          },
+          {
+            "type": "terminal",
+            "service": "text",
+            "parameters": {
+              "attribute": "rcsb_entry_info.polymer_entity_count_DNA",
+              "operator": "equals",
+              "value": 0
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "return_type": "entry",
+  "request_options": {
+    "paginate": {
+      "start": 0,
+      "rows": 10000
+    },
+    "results_content_type": ["experimental"],
+    "sort": [
+      {
+        "sort_by": "rcsb_entry_info.resolution_combined",
+        "direction": "asc"
+      }
+    ]
+  }
+}

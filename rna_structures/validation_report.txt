@@ -1,0 +1,62 @@
+RNA Structure Validation Report
+============================================================
+
+Total files: 49
+Valid files: 43
+Invalid files: 6
+
+VALID STRUCTURES:
+----------------------------------------
+1j8g.pdb     | Chains: 4 | Residues:   24 | C3':   24 | Res: 0.61Å
+1q9a.pdb     | Chains: 1 | Residues:   27 | C3':   34 | Res: 1.04Å
+2q1o.pdb     | Chains: 4 | Residues:   44 | C3':   44 | Res: 1.10Å
+2q1r.pdb     | Chains: 1 | Residues:   12 | C3':   12 | Res: 1.12Å
+3dvz.pdb     | Chains: 1 | Residues:   27 | C3':   29 | Res: 1.00Å
+3dw4.pdb     | Chains: 1 | Residues:   26 | C3':   26 | Res: 0.97Å
+3dw5.pdb     | Chains: 1 | Residues:   26 | C3':   28 | Res: 0.96Å
+3dw6.pdb     | Chains: 1 | Residues:   26 | C3':   26 | Res: 1.00Å
+3dw7.pdb     | Chains: 1 | Residues:   26 | C3':   29 | Res: 1.00Å
+3nj6.pdb     | Chains: 1 | Residues:   10 | C3':   10 | Res: 0.95Å
+3ok4.pdb     | Chains: 15 | Residues:  150 | C3':  150 | Res: 1.15Å
+3r1e.pdb     | Chains: 2 | Residues:   14 | C3':   15 | Res: 0.97Å
+3s7c.pdb     | Chains: 1 | Residues:   26 | C3':   28 | Res: 1.10Å
+434d.pdb     | Chains: 4 | Residues:   28 | C3':   28 | Res: 1.16Å
+483d.pdb     | Chains: 1 | Residues:   27 | C3':   32 | Res: 1.11Å
+4jrd.pdb     | Chains: 2 | Residues:   22 | C3':   22 | Res: 1.00Å
+4nlf.pdb     | Chains: 1 | Residues:   26 | C3':   27 | Res: 1.00Å
+4nmg.pdb     | Chains: 1 | Residues:   26 | C3':   28 | Res: 1.01Å
+4nxh.pdb     | Chains: 1 | Residues:   26 | C3':   28 | Res: 1.16Å
+4rbq.pdb     | Chains: 1 | Residues:   32 | C3':   32 | Res: 1.05Å
+4rc0.pdb     | Chains: 1 | Residues:   10 | C3':   14 | Res: 1.13Å
+4rj1.pdb     | Chains: 2 | Residues:   12 | C3':   12 | Res: 0.92Å
+4rkv.pdb     | Chains: 2 | Residues:   12 | C3':   12 | Res: 0.88Å
+4rne.pdb     | Chains: 8 | Residues:   48 | C3':   52 | Res: 1.01Å
+4xk0.pdb     | Chains: 2 | Residues:   12 | C3':   12 | Res: 1.08Å
+4y27.pdb     | Chains: 1 | Residues:   25 | C3':   25 | Res: 1.00Å
+5d99.pdb     | Chains: 1 | Residues:   26 | C3':   30 | Res: 0.97Å
+5da6.pdb     | Chains: 1 | Residues:   32 | C3':   36 | Res: 1.05Å
+5mrx.pdb     | Chains: 1 | Residues:   26 | C3':   28 | Res: 0.85Å
+5nqi.pdb     | Chains: 1 | Residues:   26 | C3':   28 | Res: 0.85Å
+5v2h.pdb     | Chains: 4 | Residues:   24 | C3':   24 | Res: 1.08Å
+6xur.pdb     | Chains: 1 | Residues:   11 | C3':   11 | Res: 1.10Å
+6xus.pdb     | Chains: 1 | Residues:   11 | C3':   12 | Res: 1.10Å
+6y0y.pdb     | Chains: 1 | Residues:   27 | C3':   27 | Res: 0.95Å
+6zyb.pdb     | Chains: 1 | Residues:   26 | C3':   30 | Res: 0.90Å
+7l3r.pdb     | Chains: 1 | Residues:   26 | C3':   30 | Res: 1.01Å
+7qp2.pdb     | Chains: 1 | Residues:   26 | C3':   32 | Res: 0.90Å
+7qsh.pdb     | Chains: 1 | Residues:   25 | C3':   34 | Res: 0.86Å
+7qua.pdb     | Chains: 1 | Residues:   11 | C3':   12 | Res: 1.00Å
+7ucr.pdb     | Chains: 1 | Residues:   27 | C3':   29 | Res: 1.00Å
+8pfq.pdb     | Chains: 2 | Residues:   22 | C3':   22 | Res: 1.01Å
+8qmh.pdb     | Chains: 4 | Residues:   24 | C3':   39 | Res: 1.10Å
+8vjt.pdb     | Chains: 2 | Residues:   12 | C3':   24 | Res: 1.05Å
+
+
+INVALID STRUCTURES:
+----------------------------------------
+1p79.pdb     | Issues: Too few RNA residues (5 < 10)
+2wna.pdb     | Issues: No RNA chains found, No C3' atoms found, Too few RNA residues (0 < 10)
+3p4c.pdb     | Issues: Too few RNA residues (8 < 10)
+5eme.pdb     | Issues: Too few RNA residues (8 < 10)
+5emf.pdb     | Issues: Too few RNA residues (8 < 10)
+5k8h.pdb     | Issues: Too few RNA residues (2 < 10)
