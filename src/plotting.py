@@ -5,6 +5,13 @@ Visualize frequency distributions and scoring functions.
 The script expects the CSV outputs of training.py (freq_*.csv, score_*.csv).
 It generates per-pair plots for the frequency distribution, the scoring
 profile, and a combined interaction plot overlaying both.
+
+Usage:
+python3 src/plotting.py --input-dir data/examples/training_output --output-dir data/examples/plots 
+
+Options:
+--pairs AU CG GG  # Optional subset of pairs to plot
+
 """
 from __future__ import annotations
 

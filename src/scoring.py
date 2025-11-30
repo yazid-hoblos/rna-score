@@ -106,7 +106,7 @@ def collect_distances(
             residues.append((resseq, res_type, coord))
         residues.sort(key=lambda x: x[0])
 
-        for i, (_, res_i, coord_i) in enumerate(residues):
+        for i, (idx_i, res_i, coord_i) in enumerate(residues):
             for j in range(i + min_separation, len(residues)):
                 idx_j, res_j, coord_j = residues[j]
                 dist = float(np.linalg.norm(coord_i - coord_j))
