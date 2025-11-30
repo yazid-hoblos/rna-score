@@ -19,7 +19,6 @@ The project is originally composed of 4 main scripts:
   Then it measures the distances between pairs of amino acid residues based on their 3D coordinates as a residue from the C3' atom in the ribose sugar or the C5' atom, this is defined by the user. It doesn't compute the intramolecular distances of the residues close to it (i+4). The output is saved in a structured format (e.g., CSV or JSON) for further analysis. The output file has the structure of:
     ```PDB_ID,Residue_Type_1,Chain_ID_1,Residue_Seq_Num_1,X_Coord_1,Y_Coord_1,Z_Coord_1,Residue_Type_2,Chain_ID_2,Residue_Seq_Num_2,X_Coord_2,Y_Coord_2,Z_Coord_2,Distance```
 
-
 - `training.py`: This script is design to create multiple frequency tables based on the structural features extracted from the RNA data. It takes as input the preprocessed data from `data_preparation.py` and computes the frequency distributions for the distances between pairs of amino acid residues (either intra- or inter-chain). It considers distance between the pairs A-U and U-A to be part of the same distribution, and creates also a general distribution for all residues against all residues, called X-X. Thus we end with 11 frequency tables with 20 distances intervals each (0 to 20 Å). The user can specify if it's using intra-chain or inter-chain distances between residues. Then this frequency data is used to build a statististical scoring function for RNA tertiary structure prediction. It used the following formula to compute the frequencies:
   
   $\ f(d) = \frac{N(d)}{N_{total}}$
@@ -39,14 +38,17 @@ The project is originally composed of 4 main scripts:
 ## Setup
 
 1. Install dependencies:
+
    ```bash
    pip install -r requirements.txt
    ```
+
 2. Make sure `python3` is available on your PATH.
 
 ## How to run
 
 End-to-end example (using the full list in `data/examples/rna_chains.txt`):
+
 ```bash
 python3 src/data_preparation.py --ids-file data/examples/rna_chains.txt --output data/examples/prepared.csv
 python3 src/training.py --input data/examples/prepared.csv --output-dir data/examples/training_output
@@ -59,8 +61,10 @@ Each script exposes `--help`/`-h` for details on flags.
 ## Smoke test
 
 A quick sanity check with a single structure is provided:
+
 ```bash
-chmod +x scripts/smoke_test.sh
-./scripts/smoke_test.sh
+chmod +x src/smoke_test.sh
+./src/smoke_test.sh
 ```
+
 This uses `data/examples/smoke_ids.txt` (1EHZ chain A) to build a tiny training set and score the test CIF in `data/examples/test/1EHZ.cif`.
