@@ -1,0 +1,18 @@
+{
+  "input": "data/examples/prepared.csv",
+  "output_dir": "data/examples/training_output",
+  "max_distance": 20.0,
+  "bin_size": 1.0,
+  "pairs": [
+    "AA",
+    "AU",
+    "AC",
+    "AG",
+    "UU",
+    "UC",
+    "UG",
+    "CC",
+    "CG",
+    "GG"
+  ]
+}
