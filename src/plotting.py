@@ -6,12 +6,9 @@ The script expects the CSV outputs of training.py (freq_*.csv, score_*.csv).
 It generates per-pair plots for the frequency distribution, the scoring
 profile, and a combined interaction plot overlaying both.
 
-Usage:
-python3 src/plotting.py --input-dir data/examples/training_output --output-dir data/examples/plots 
-
-Options:
---pairs AU CG GG  # Optional subset of pairs to plot
-
+Usage example:
+    python3 src/plotting.py --input-dir data/examples/training_output \\
+        --output-dir data/examples/plots
 """
 from __future__ import annotations
 
@@ -24,6 +21,7 @@ import pandas as pd
 
 
 def find_pairs(input_dir: Path, only: Optional[Iterable[str]]) -> List[str]:
+    """Return residue-pair keys present in the input directory."""
     if only:
         return [pair.upper() for pair in only]
     pairs = []
@@ -36,6 +34,7 @@ def find_pairs(input_dir: Path, only: Optional[Iterable[str]]) -> List[str]:
 
 
 def plot_frequency(df: pd.DataFrame, pair: str, output_dir: Path) -> None:
+    """Plot frequency distribution for a residue pair."""
     width = float((df["Distance_Max"] - df["Distance_Min"]).iloc[0]) * 0.9
     fig, ax = plt.subplots(figsize=(8, 4))
     ax.bar(df["Distance_Mid"], df["Frequency"], width=width, color="#2a9d8f", edgecolor="black")
@@ -49,6 +48,7 @@ def plot_frequency(df: pd.DataFrame, pair: str, output_dir: Path) -> None:
 
 
 def plot_score(df: pd.DataFrame, pair: str, output_dir: Path) -> None:
+    """Plot scoring function for a residue pair."""
     fig, ax = plt.subplots(figsize=(8, 4))
     ax.plot(df["Distance_Mid"], df["Score"], marker="o", color="#e76f51")
     ax.set_xlabel("Distance (Å)")
@@ -61,10 +61,23 @@ def plot_score(df: pd.DataFrame, pair: str, output_dir: Path) -> None:
     plt.close(fig)
 
 
-def plot_interaction(freq_df: pd.DataFrame, score_df: pd.DataFrame, pair: str, output_dir: Path) -> None:
+def plot_interaction(
+    freq_df: pd.DataFrame,
+    score_df: pd.DataFrame,
+    pair: str,
+    output_dir: Path,
+) -> None:
+    """Plot combined frequency and score interaction profile."""
     width = float((freq_df["Distance_Max"] - freq_df["Distance_Min"]).iloc[0]) * 0.9
     fig, ax1 = plt.subplots(figsize=(9, 4))
-    ax1.bar(freq_df["Distance_Mid"], freq_df["Frequency"], width=width, color="#90caf9", edgecolor="black", alpha=0.6)
+    ax1.bar(
+        freq_df["Distance_Mid"],
+        freq_df["Frequency"],
+        width=width,
+        color="#90caf9",
+        edgecolor="black",
+        alpha=0.6,
+    )
     ax1.set_xlabel("Distance (Å)")
     ax1.set_ylabel("Frequency", color="#1e88e5")
     ax1.tick_params(axis="y", labelcolor="#1e88e5")
@@ -82,9 +95,20 @@ def plot_interaction(freq_df: pd.DataFrame, score_df: pd.DataFrame, pair: str, o
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
+    """CLI entrypoint for plotting frequency and scoring profiles."""
     parser = argparse.ArgumentParser(description="Plot frequency and scoring profiles.")
-    parser.add_argument("--input-dir", type=Path, default=Path("training_output"), help="Directory with freq_*.csv and score_*.csv")
-    parser.add_argument("--output-dir", type=Path, default=Path("plots"), help="Where to store generated images")
+    parser.add_argument(
+        "--input-dir",
+        type=Path,
+        default=Path("training_output"),
+        help="Directory with freq_*.csv and score_*.csv",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("plots"),
+        help="Where to store generated images",
+    )
     parser.add_argument("--pairs", nargs="*", help="Subset of pairs to plot (e.g., AU CG GG)")
     args = parser.parse_args(argv)
 

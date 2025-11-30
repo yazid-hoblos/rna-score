@@ -1,0 +1,18 @@
+{
+  "input": "data/examples/prepared_smoke.csv",
+  "output_dir": "data/examples/training_output_smoke",
+  "max_distance": 20.0,
+  "bin_size": 1.0,
+  "pairs": [
+    "AA",
+    "AC",
+    "AG",
+    "AU",
+    "CC",
+    "CG",
+    "UC",
+    "GG",
+    "UG",
+    "UU"
+  ]
+}

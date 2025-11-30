@@ -2,28 +2,10 @@
 """
 Prepare RNA structural data by extracting inter-residue distances.
 
-Inputs can be PDB IDs (downloaded from RCSB) or local PDB/mmCIF files listed
-in a text/CSV file. The script keeps only C3' or C5' atoms, computes
-intrachain distances for residues separated by at least `--min-separation`
-(default: i and i+4), and filters out distances above `--max-distance`.
-
-Output: CSV with one row per residue pair:
-PDB_ID,Residue_Type_1,Chain_ID_1,Residue_Seq_Num_1,X_Coord_1,Y_Coord_1,Z_Coord_1,Residue_Type_2,Chain_ID_2,Residue_Seq_Num_2,X_Coord_2,Y_Coord_2,Z_Coord_2,Distance
-    
-Usage example:
-
-python3 src/data_preparation.py --ids-file data/examples/rna_chains.txt --output data/examples/prepared.csv
-    
-Options:
---ids-file         Text/CSV file with PDB IDs (optionally followed by chain).
---output           Destination CSV path.
---cache-dir       Directory to cache downloaded structures.
---atom             Atom to use for distance calculations (C3' or C5').
---max-distance     Maximum distance (Å) to retain.
---min-separation   Minimum sequence separation between residues (i, i+N).
---structure-format Preferred download format when fetching from RCSB (auto, pdb, cif, mmcif).
---log-level       Logging level (DEBUG, INFO, WARNING, ERROR).
-
+The script downloads or reads PDB/mmCIF files, keeps only C3'/C5' atoms,
+computes intrachain distances separated by at least `--min-separation`,
+filters out distances above `--max-distance`, and writes a CSV with one row
+per residue pair.
 """
 from __future__ import annotations
 
@@ -40,41 +22,20 @@ from Bio.PDB.MMCIFParser import MMCIFParser
 from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.Structure import Structure
 
-
-NUCLEOTIDE_MAP = {
-    "A": "A",
-    "ADE": "A",
-    "G": "G",
-    "GUA": "G",
-    "C": "C",
-    "CYT": "C",
-    "U": "U",
-    "URA": "U",
-    "T": "U",  # occasionally T is used in RNA structures
-}
-
-ATOM_NAME_ALIASES = {
-    "C3'": {"C3'", 'C3*'},
-    "C5'": {"C5'", 'C5*'},
-}
+from rna_utils import ATOM_NAME_ALIASES, extract_chain_residues
 
 
 @dataclass
 class PDBEntry:
+    """Identifier for a PDB entry with an optional chain or local path."""
+
     identifier: str
     chain: Optional[str] = None
     path: Optional[Path] = None
 
 
-def standardize_residue_name(resname: str) -> Optional[str]:
-    name = resname.strip().upper()
-    return NUCLEOTIDE_MAP.get(name)
-
-
 def parse_input_list(path: Path) -> List[PDBEntry]:
-    """
-    Accepts CSV (pdb_id,chain) or plain text (PDB_ID [CHAIN]).
-    """
+    """Parse CSV or whitespace list of PDB IDs with optional chain column."""
     entries: List[PDBEntry] = []
     text = path.read_text().splitlines()
     has_comma = any("," in line for line in text)
@@ -98,13 +59,12 @@ def parse_input_list(path: Path) -> List[PDBEntry]:
 
 
 def download_structure(pdb_id: str, cache_dir: Optional[Path], prefer_format: str) -> Path:
+    """Download a PDB/mmCIF file and return the local path (cached if present)."""
     pdb_id = pdb_id.lower()
     fmt = prefer_format.lower()
     if fmt not in {"pdb", "cif", "mmcif", "auto"}:
         raise ValueError(f"Unsupported format {prefer_format}")
-    if fmt == "auto":
-        fmt = "cif"
-    ext = "cif" if fmt in {"cif", "mmcif"} else "pdb"
+    ext = "cif" if fmt in {"cif", "mmcif", "auto"} else "pdb"
     url = f"https://files.rcsb.org/download/{pdb_id}.{ext}"
     if cache_dir:
         cache_dir.mkdir(parents=True, exist_ok=True)
@@ -121,6 +81,7 @@ def download_structure(pdb_id: str, cache_dir: Optional[Path], prefer_format: st
 
 
 def parse_structure(path: Path) -> Structure:
+    """Parse a local structure file into a Bio.PDB Structure object."""
     suffix = path.suffix.lower()
     if suffix in {".cif", ".mmcif"}:
         parser = MMCIFParser(QUIET=True)
@@ -128,25 +89,18 @@ def parse_structure(path: Path) -> Structure:
         parser = PDBParser(QUIET=True)
     else:
         raise ValueError(f"Unsupported structure format for {path}")
-    structure_id = path.stem
-    structure = parser.get_structure(structure_id, str(path))
+    structure = parser.get_structure(path.stem, str(path))
     if structure is None or not isinstance(structure, Structure):
         raise ValueError(f"Failed to parse structure from {path}")
     return structure
 
 
 def load_structure(entry: PDBEntry, cache_dir: Optional[Path], prefer_format: str) -> Structure:
+    """Load a structure either from a local path or by downloading from RCSB."""
     if entry.path:
         return parse_structure(entry.path)
     path = download_structure(entry.identifier, cache_dir, prefer_format)
     return parse_structure(path)
-
-
-def find_atom_coordinate(residue, target_names: Iterable[str]) -> Optional[np.ndarray]:
-    for atom in residue.get_atoms():
-        if atom.get_name() in target_names:
-            return atom.get_coord()
-    return None
 
 
 def collect_chain_records(
@@ -157,25 +111,13 @@ def collect_chain_records(
     min_separation: int,
     pdb_id: str,
 ) -> List[Tuple]:
-    chain = structure[0][chain_id]
-    residues = []
-    for residue in chain:
-        het_flag, resseq, _icode = residue.id
-        if het_flag != " ":
-            continue  # skip heteroatoms
-        res_type = standardize_residue_name(residue.get_resname())
-        if not res_type:
-            continue
-        coord = find_atom_coordinate(residue, target_names)
-        if coord is None:
-            continue
-        residues.append((resseq, res_type, coord))
-    residues.sort(key=lambda x: x[0])
+    """Return distance rows for a single chain."""
+    # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
+    residues = extract_chain_residues(structure[0][chain_id], target_names)
 
     records: List[Tuple] = []
     for i, (res_i_idx, res_i_type, coord_i) in enumerate(residues):
-        for j in range(i + min_separation, len(residues)):
-            res_j_idx, res_j_type, coord_j = residues[j]
+        for res_j_idx, res_j_type, coord_j in residues[i + min_separation :]:
             distance = float(np.linalg.norm(coord_i - coord_j))
             if distance > max_distance:
                 continue
@@ -207,6 +149,7 @@ def extract_distances(
     max_distance: float,
     min_separation: int,
 ) -> List[Tuple]:
+    """Extract all qualifying distance rows for an entry across one or more chains."""
     target_names = ATOM_NAME_ALIASES[atom_choice]
     pdb_id = entry.identifier.upper()
     chain_ids = [entry.chain] if entry.chain else [c.id for c in structure[0]]
@@ -229,6 +172,7 @@ def extract_distances(
 
 
 def write_output(rows: List[Tuple], output_path: Path) -> None:
+    """Write the aggregated rows to CSV."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
     header = [
         "PDB_ID",
@@ -249,11 +193,11 @@ def write_output(rows: List[Tuple], output_path: Path) -> None:
     with output_path.open("w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(header)
-        for row in rows:
-            writer.writerow(row)
+        writer.writerows(rows)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
+    """CLI entrypoint for preparing distance rows from structures."""
     parser = argparse.ArgumentParser(description="Prepare RNA distance dataset.")
     parser.add_argument(
         "--ids-file",
@@ -303,7 +247,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         help="Logging level (DEBUG, INFO, WARNING, ERROR).",
     )
     args = parser.parse_args(argv)
-    logging.basicConfig(level=getattr(logging, args.log_level.upper(), logging.INFO), format="%(levelname)s: %(message)s")
+    logging.basicConfig(
+        level=getattr(logging, args.log_level.upper(), logging.INFO),
+        format="%(levelname)s: %(message)s",
+    )
 
     entries = parse_input_list(args.ids_file)
     if not entries:
@@ -314,10 +261,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     for entry in entries:
         try:
             structure = load_structure(entry, args.cache_dir, args.structure_format)
-        except Exception as exc:  # noqa: BLE001
+        except (requests.RequestException, OSError, ValueError) as exc:
             logging.error("Failed to load %s: %s", entry.identifier, exc)
             continue
-        rows = extract_distances(structure, entry, args.atom, args.max_distance, args.min_separation)
+        rows = extract_distances(
+            structure,
+            entry,
+            args.atom,
+            args.max_distance,
+            args.min_separation,
+        )
         logging.info(
             "Processed %s (chains: %s) -> %d distance rows",
             entry.identifier,

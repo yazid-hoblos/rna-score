@@ -1,2 +1,5 @@
 # Ignore downloaded/cache artifacts
 .cache/
+.venv/
+.__pycache__/
+src/__pycache__/

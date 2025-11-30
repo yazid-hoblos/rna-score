@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 """
 Build residue-pair scoring tables from prepared distance data.
-
-The script expects the CSV produced by data_preparation.py. It builds 10
-pairwise distributions (AA, AU, AC, AG, UU, UC, UG, CC, CG, GG), a reference
-distribution (XX), computes observed frequencies, and derives pseudo-energy
-scores: -log(f_obs / f_ref), clipped to a maximum value.
 """
 from __future__ import annotations
 
@@ -17,49 +12,13 @@ from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 import numpy as np
 import pandas as pd
 
+from rna_utils import PAIR_CANONICAL, canonical_pair_key
 
-PAIR_KEYS = ["AA", "AU", "AC", "AG", "UU", "UC", "UG", "CC", "CG", "GG"]
-# Map sorted residue pairs to canonical labels so symmetric pairs are counted.
-PAIR_CANONICAL = {
-    "AA": "AA",
-    "AC": "AC",
-    "AG": "AG",
-    "AU": "AU",
-    "CC": "CC",
-    "CG": "CG",
-    "CU": "UC",
-    "GG": "GG",
-    "GU": "UG",
-    "UU": "UU",
-}
-NUCLEOTIDE_MAP = {
-    "A": "A",
-    "ADE": "A",
-    "G": "G",
-    "GUA": "G",
-    "C": "C",
-    "CYT": "C",
-    "U": "U",
-    "URA": "U",
-    "T": "U",
-}
-
-
-def clean_residue(res: str) -> Optional[str]:
-    res = res.strip().upper()
-    return NUCLEOTIDE_MAP.get(res)
-
-
-def pair_key(res1: str, res2: str) -> Optional[str]:
-    r1 = clean_residue(res1)
-    r2 = clean_residue(res2)
-    if not r1 or not r2:
-        return None
-    ordered = "".join(sorted([r1, r2]))
-    return PAIR_CANONICAL.get(ordered)
+PAIR_KEYS = list(PAIR_CANONICAL.values())
 
 
 def build_bins(max_distance: float, bin_size: float) -> np.ndarray:
+    """Return bin edges from 0 to max_distance inclusive."""
     edges = np.arange(0, max_distance + bin_size, bin_size, dtype=float)
     if edges[-1] < max_distance:
         edges = np.append(edges, max_distance)
@@ -67,6 +26,7 @@ def build_bins(max_distance: float, bin_size: float) -> np.ndarray:
 
 
 def histogram(distances: Iterable[float], bins: np.ndarray) -> np.ndarray:
+    """Count distances into provided bins."""
     distances_arr = np.fromiter(distances, dtype=float)
     if distances_arr.size == 0:
         return np.zeros(len(bins) - 1, dtype=float)
@@ -77,10 +37,12 @@ def histogram(distances: Iterable[float], bins: np.ndarray) -> np.ndarray:
 def compute_tables(
     df: pd.DataFrame, bins: np.ndarray, max_score: float, pseudocount: float
 ) -> Tuple[Dict[str, pd.DataFrame], pd.DataFrame]:
+    """Compute frequency and scoring tables for each residue pair and reference."""
+    # pylint: disable=too-many-locals
     distances_ref: List[float] = []
     pair_distance_map: Dict[str, List[float]] = {key: [] for key in PAIR_KEYS}
     for _, row in df.iterrows():
-        key = pair_key(row["Residue_Type_1"], row["Residue_Type_2"])
+        key = canonical_pair_key(row["Residue_Type_1"], row["Residue_Type_2"])
         if not key:
             continue
         distance = float(row["Distance"])
@@ -101,12 +63,16 @@ def compute_tables(
     for key, dists in pair_distance_map.items():
         counts = histogram(dists, bins)
         total = counts.sum()
-        freq = (counts + pseudocount) / (total + pseudocount * len(counts)) if total > 0 else np.zeros_like(counts)
+        if total > 0:
+            denom = total + pseudocount * len(counts)
+            freq = (counts + pseudocount) / denom
+        else:
+            freq = np.zeros_like(counts)
         safe_ref = np.where(ref_freq <= 0, pseudocount, ref_freq)
         safe_freq = np.where(freq <= 0, pseudocount, freq)
         score = -np.log(np.divide(safe_freq, safe_ref))
         score = np.clip(score, None, max_score)
-        table = pd.DataFrame(
+        pair_tables[key] = pd.DataFrame(
             {
                 "Distance_Min": bin_left,
                 "Distance_Max": bin_right,
@@ -116,7 +82,6 @@ def compute_tables(
                 "Score": score,
             }
         )
-        pair_tables[key] = table
 
     ref_table = pd.DataFrame(
         {
@@ -130,26 +95,56 @@ def compute_tables(
     return pair_tables, ref_table
 
 
-def save_tables(pair_tables: Dict[str, pd.DataFrame], ref_table: pd.DataFrame, output_dir: Path) -> None:
+def save_tables(
+    pair_tables: Dict[str, pd.DataFrame],
+    ref_table: pd.DataFrame,
+    output_dir: Path,
+) -> None:
+    """Persist frequency/score tables to CSV files in the output directory."""
     output_dir.mkdir(parents=True, exist_ok=True)
     for key, table in pair_tables.items():
+        freq_path = output_dir / f"freq_{key}.csv"
+        score_path = output_dir / f"score_{key}.csv"
         table[["Distance_Min", "Distance_Max", "Distance_Mid", "Frequency"]].to_csv(
-            output_dir / f"freq_{key}.csv", index=False
+            freq_path,
+            index=False,
         )
         table[["Distance_Min", "Distance_Max", "Distance_Mid", "Score"]].to_csv(
-            output_dir / f"score_{key}.csv", index=False
+            score_path,
+            index=False,
         )
     ref_table.to_csv(output_dir / "freq_XX.csv", index=False)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
+    """CLI entrypoint for training scoring tables."""
     parser = argparse.ArgumentParser(description="Train residue-pair scoring tables.")
     parser.add_argument("--input", required=True, type=Path, help="CSV from data_preparation.py")
-    parser.add_argument("--output-dir", type=Path, default=Path("training_output"), help="Where to store tables")
-    parser.add_argument("--max-distance", type=float, default=20.0, help="Max distance used for bins")
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("training_output"),
+        help="Where to store tables",
+    )
+    parser.add_argument(
+        "--max-distance",
+        type=float,
+        default=20.0,
+        help="Max distance used for bins",
+    )
     parser.add_argument("--bin-size", type=float, default=1.0, help="Bin width in Å")
-    parser.add_argument("--pseudocount", type=float, default=1e-4, help="Additive smoothing to avoid zeros")
-    parser.add_argument("--max-score", type=float, default=10.0, help="Upper bound for pseudo-energy")
+    parser.add_argument(
+        "--pseudocount",
+        type=float,
+        default=1e-4,
+        help="Additive smoothing to avoid zeros",
+    )
+    parser.add_argument(
+        "--max-score",
+        type=float,
+        default=10.0,
+        help="Upper bound for pseudo-energy",
+    )
     args = parser.parse_args(argv)
 
     df = pd.read_csv(args.input)
