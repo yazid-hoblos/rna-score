@@ -78,6 +78,15 @@ def main():
     access_parser.add_argument('--validate', action='store_true',
                               help='Run validation on downloaded structures')
 
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        print("""
+    ====================================
+         Welcome to rna-score CLI
+    ====================================
+Analyze, train, and score RNA structures with ease.
+    """)
+        sys.exit(0)
     args = parser.parse_args()
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
