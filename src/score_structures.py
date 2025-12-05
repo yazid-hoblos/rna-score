@@ -60,7 +60,13 @@ class ScoringTables:
         
         # Linear interpolation
         score = np.interp(distance, distances, scores, left=scores[0], right=scores[-1])
+        # TODO add spline interpolation option
+        # from scipy.interpolate import UnivariateSpline
+        # spline = UnivariateSpline(distances, scores, s=0)
+        # score = spline(distance)
+        
         return float(score)
+    
     
     def canonical_pair_key(self, res1, res2):
         """Convert residue pair to canonical key (alphabetically sorted)."""
