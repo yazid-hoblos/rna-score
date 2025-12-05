@@ -52,7 +52,7 @@ pip install -e .
 ### 1. Download RNA Structures
 
 ```bash
-rna-score access -n 50 --rna-only -f cif -o rna_structures --workers 4
+rna-score access -n 50 --rna-only -f cif -o data/rna_structures --workers 4
 ```
 *Add `--validate` to filter out invalid downloaded files.*
 
@@ -83,20 +83,17 @@ rna-score plot --input-dir training_output --output-dir plots --combined
 
 ```bash
 # add pdb ids and chains for scoring
-cat <<EOF > score_list.txt
+cat <<EOF > tests/scoring_list.txt
 1EHZ A
 1Y26 B C
 EOF
 
-rna-score workflow --train-folder rna_structures/mmcif --score-list score_list.txt --output-dir workflow_output --format mmcif --method histogram
+rna-score workflow --train-folder data/rna_structures/mmcif --score-list tests/scoring_list.txt --output-dir tests/workflow_output --format mmcif --method histogram
 ```
 
 This runs extraction, training, scoring, and plotting in a single step. See `rna-score workflow --help` for all options.
-```
 
 *Each subcommand supports `--help` / `-h` for details.*
-
----
 
 ## Web Interface
 
