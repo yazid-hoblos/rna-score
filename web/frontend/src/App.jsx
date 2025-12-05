@@ -345,16 +345,39 @@ function PipelineTab({ setJobId, setJobStatus }) {
     formData.append('include_plot', includePlot);
 
     try {
+      console.log('Submitting pipeline request...');
       const response = await fetch('/api/pipeline', {
         method: 'POST',
         body: formData
       });
-      const data = await response.json();
+      
+      console.log('Response status:', response.status, response.statusText);
+      const responseText = await response.text();
+      console.log('Response body:', responseText);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${responseText}`);
+      }
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        throw new Error(`Invalid JSON response: ${responseText}`);
+      }
+      
+      console.log('Parsed data:', data);
+      
+      if (!data || !data.job_id) {
+        throw new Error(`No job_id in response: ${JSON.stringify(data)}`);
+      }
+      
       setCurrentJobId(data.job_id);
       setJobId(data.job_id);
       setJobStatus(`Pipeline job ${data.job_id} submitted`);
       alert(`Pipeline job submitted! ID: ${data.job_id}`);
     } catch (error) {
+      console.error('Pipeline submit error:', error);
       alert('Error: ' + error.message);
       setPipelineSteps(prev => ({
         ...prev,

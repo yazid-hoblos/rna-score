@@ -178,7 +178,9 @@ def run_full_pipeline(job_id: str, train_file: str, score_file: str, atom_mode: 
         ]
         
         print(f"[{job_id}] Running: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROJECT_ROOT), timeout=300)
+        env = os.environ.copy()
+        env['PYTHONPATH'] = str(PROJECT_ROOT)
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROJECT_ROOT), env=env, timeout=300)
         print(f"[{job_id}] Extract returncode: {result.returncode}")
         if result.stdout:
             print(f"[{job_id}] Extract stdout: {result.stdout}")
@@ -205,7 +207,9 @@ def run_full_pipeline(job_id: str, train_file: str, score_file: str, atom_mode: 
             "--method", method
         ]
         
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROJECT_ROOT), timeout=300)
+        env = os.environ.copy()
+        env['PYTHONPATH'] = str(PROJECT_ROOT)
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROJECT_ROOT), env=env, timeout=300)
         if result.returncode != 0:
             raise Exception(f"Training failed: {result.stderr}")
         
@@ -226,7 +230,9 @@ def run_full_pipeline(job_id: str, train_file: str, score_file: str, atom_mode: 
             "--output", str(scores_file)
         ]
         
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROJECT_ROOT), timeout=300)
+        env = os.environ.copy()
+        env['PYTHONPATH'] = str(PROJECT_ROOT)
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROJECT_ROOT), env=env, timeout=300)
         if result.returncode != 0:
             raise Exception(f"Scoring failed: {result.stderr}")
         
@@ -243,7 +249,9 @@ def run_full_pipeline(job_id: str, train_file: str, score_file: str, atom_mode: 
                 "--output-dir", str(plots_dir)
             ]
             
-            result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROJECT_ROOT), timeout=300)
+            env = os.environ.copy()
+            env['PYTHONPATH'] = str(PROJECT_ROOT)
+            result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROJECT_ROOT), env=env, timeout=300)
             if result.returncode != 0:
                 # Don't fail pipeline if plotting fails
                 pass
