@@ -43,7 +43,7 @@ Parameters / Command-line options:
         - Single atom name (e.g., "C3'")
         - "centroid" for nucleotide centroid
         - "all" for all atoms
-        - list of atom names
+        - list of atom names (e.g., "C3'" "P" "O")
       Default: ["C3'"]
 
   --dist-mode {intra,inter}
@@ -80,13 +80,13 @@ import numpy as np
 import pandas as pd
 import time
 from concurrent.futures import ProcessPoolExecutor
+from itertools import repeat
 import glob
 from scipy.spatial import cKDTree
 from collections import defaultdict
 from utils.structure_io import FastParser, OnlineFetcher
 
-# Global configuration shared with worker processes
-_WORKER_CONFIG = {}
+# Global configuration removed; config is passed explicitly per worker
 
 def parse_input_file(filename):
     """
@@ -110,13 +110,12 @@ def parse_input_file(filename):
             })
     return targets
 
-def worker_process(target):
+def worker_process(target, cfg):
     """
     Worker function to fetch, parse, and compute distances for a single target.
     Returns (results_dict, detailed_df) or (None, None) if processing fails.
     """
     try:
-        cfg = _WORKER_CONFIG
         ident = target['id']
         file_id = os.path.basename(ident).split('.')[0] # Use filename as ID for local files
 
@@ -269,9 +268,6 @@ def process_dataset_parallel(targets, config, max_workers=None):
     Process a list of targets in parallel using ProcessPoolExecutor.
     Returns final_results (dict of distance lists) and all_detailed_dfs (list of pandas DataFrames)
     """
-    global _WORKER_CONFIG
-    _WORKER_CONFIG = config
-    
     keys = ['AA', 'AC', 'AG', 'AU', 'CC', 'CG', 'CU', 'GG', 'GU', 'UU', 'XX']
     final_results = {k: [] for k in keys}
     all_detailed_dfs = []
@@ -288,7 +284,7 @@ def process_dataset_parallel(targets, config, max_workers=None):
         max_workers = os.cpu_count() or 1
 
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        results = list(executor.map(worker_process, targets))
+        results = executor.map(worker_process, targets, repeat(config))
         for i, (dists, df) in enumerate(results):
             if dists is None:
                 continue
@@ -326,9 +322,6 @@ def main():
     parser.add_argument('--save-detailed', action='store_true', help="Export detailed CSV log of interactions. Default: False")
     
     args = parser.parse_args()
-
-    if args.format == 'mmcif':
-        args.atom_mode = ['"C3\'"'] if args.atom_mode == ["C3'"] else args.atom_mode
     
     # Normalize atom mode
     mode_arg = args.atom_mode

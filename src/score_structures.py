@@ -84,7 +84,8 @@ class ScoringTables:
         return f"{res1}{res2}"
 
 
-def parse_structure(filepath, file_format='pdb'):
+
+def parse_structure(filepath, file_format='pdb', atom_mode="C3'"):
     """Parse structure file and extract distance data."""
     try:
         with open(filepath, 'r') as f:
@@ -95,7 +96,6 @@ def parse_structure(filepath, file_format='pdb'):
     
     # Parse structure
     # Use quoted atom mode for mmCIF compatibility (mmCIF files have quoted atom names)
-    atom_mode = '"C3\'"' if file_format == 'mmcif' else "C3'"
     parser = FastParser(atom_mode=atom_mode)
     data = parser.parse(
         content,
@@ -192,9 +192,9 @@ def compute_structure_score(data, scoring_tables, cutoff=20.0, seq_sep=4):
     }
 
 
-def score_single_structure(filepath, scoring_tables, file_format, cutoff, seq_sep, display_name=None):
+def score_single_structure(filepath, scoring_tables, file_format, cutoff, seq_sep, atom_mode, display_name=None):
     """Score a single structure and return results."""
-    data = parse_structure(filepath, file_format)
+    data = parse_structure(filepath, file_format, atom_mode=atom_mode)
     if data is None:
         return None
     
@@ -261,7 +261,17 @@ def main():
         type=str,
         help='Save scores to CSV file (required for batch mode)'
     )
+    parser.add_argument(
+        '--atom-mode',
+        nargs='+',
+        default=["C3'"],
+        help="Atom selection mode (e.g., C3', centroid, all, or list). Default: C3'"
+    )
     args = parser.parse_args()
+    
+    atom_mode_arg = args.atom_mode
+    if len(atom_mode_arg) == 1:
+        atom_mode_arg = atom_mode_arg[0]
     
     # Load scoring tables
     print(f"Loading scoring tables from {args.tables}...")
@@ -356,15 +366,11 @@ def main():
             filepath = file_entry
             display_name = os.path.basename(filepath)
             is_temp = False
-        
         print(f"\n[{idx}/{len(files_to_score)}] Scoring: {display_name}...")
-        
-        result = score_single_structure(filepath, scoring_tables, args.format, args.cutoff, args.seq_sep, display_name=display_name)
-        
+        result = score_single_structure(filepath, scoring_tables, args.format, args.cutoff, args.seq_sep, atom_mode_arg, display_name=display_name)
         if result is None:
             print(f"  WARNING: Failed to process {display_name}, skipping...")
             continue
-        
         all_results.append(result)
         
         # Print individual results for single file mode

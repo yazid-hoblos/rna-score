@@ -6,24 +6,24 @@ This module provides tools to fetch and parse RNA structures from PDB and mmCIF 
 Main Components:
 ----------------
 1. OnlineFetcher:
-   - Downloads PDB or mmCIF files from the RCSB Protein Data Bank (in-memory).
-   - Returns the file content as a list of lines.
+   - Downloads PDB or mmCIF files from the RCSB Protein Data Bank (in-memory).
+   - Returns the file content as a list of lines.
 
 2. FastParser:
-   - Efficiently parses PDB or mmCIF files.
-   - Supports filtering by chain, atom type, and models.
-   - Supports extracting specific atoms, all atoms, or centroids per residue.
-   - Returns structured arrays containing coordinates, residue info, atom info, 
-     chain IDs, model IDs, and B-factors.
+   - Efficiently parses PDB or mmCIF files.
+   - Supports filtering by chain, atom type, and models.
+   - Supports extracting specific atoms, all atoms, or centroids per residue.
+   - Returns structured arrays containing coordinates, residue info, atom info, 
+     chain IDs, model IDs, and B-factors.
 
 Workflow Example:
 -----------------
 1. Fetch RNA structure:
-    lines = OnlineFetcher.get_content('1ABC', file_format='pdb')
+    lines = OnlineFetcher.get_content('1ABC', file_format='pdb')
 
 2. Parse structure:
-    parser = FastParser(atom_mode="C3'")
-    data = parser.parse(lines, file_format='pdb', pdb_name='1ABC')
+    parser = FastParser(atom_mode="C3'")
+    data = parser.parse(lines, file_format='pdb', pdb_name='1ABC')
 
 Dependencies:
 -------------
@@ -35,6 +35,7 @@ Dependencies:
 import numpy as np
 from collections import defaultdict
 import urllib.request
+import re
 
 
 class OnlineFetcher:
@@ -85,12 +86,23 @@ class FastParser:
     allowed_bases : set
         Set of RNA nucleotide bases to keep ('A', 'U', 'C', 'G').
     """
-    def __init__(self, atom_mode="C3'"):
+    @staticmethod
+    def _normalize_atom_name(atom_name):
+        """
+        Normalize atom names for consistent matching (removes quotes, whitespace, asterisks).
+        """
+        if not atom_name:
+            return atom_name
+        # Note: The original normalization included .replace("'", "'").
+        # Standard PDB atom names like C3' use a prime/asterisk. This ensures it's handled.
+        normalized = atom_name.strip().replace('"', '').replace("'", "'").replace('*', "'")
+        return normalized
+    
+    def __init__(self, atom_mode=["C3'"]):
         self.atom_mode = atom_mode
         self.allowed_bases = {'A', 'U', 'C', 'G'}
-        
         if isinstance(atom_mode, list):
-            self.target_atoms = set(atom_mode)
+            self.target_atoms = set([self._normalize_atom_name(a) for a in atom_mode])
             self.use_centroid = False
             self.keep_all = False
         elif atom_mode == "centroid":
@@ -102,7 +114,7 @@ class FastParser:
             self.use_centroid = False
             self.target_atoms = None
         else:
-            self.target_atoms = {atom_mode}
+            self.target_atoms = {self._normalize_atom_name(atom_mode)}
             self.use_centroid = False
             self.keep_all = False
 
@@ -168,11 +180,15 @@ class FastParser:
             if not (line.startswith("ATOM") or line.startswith("HETATM")):
                 continue
             
-            atom_name = line[12:16].strip()
+            atom_name = self._normalize_atom_name(line[12:16].strip())
             alt_loc = line[16].strip()
             res_name = line[17:20].strip()
             chain = line[21].strip()
             
+            # Exclude hydrogen atoms (common convention is for atom name to start with 'H')
+            if atom_name.startswith('H'):
+                continue
+
             if res_name not in self.allowed_bases:
                 continue
             if chains_filter and chain not in chains_filter:
@@ -302,10 +318,15 @@ class FastParser:
                     y = float(parts[indices['_atom_site.Cartn_y']])
                     z = float(parts[indices['_atom_site.Cartn_z']])
 
-                    atom_name = parts[indices.get('_atom_site.label_atom_id', indices.get('_atom_site.auth_atom_id', 0))]
+                    atom_name_raw = parts[indices.get('_atom_site.label_atom_id', indices.get('_atom_site.auth_atom_id', 0))]
+                    atom_name = self._normalize_atom_name(atom_name_raw)
                     alt_loc = parts[indices.get('_atom_site.label_alt_id', 0)] if '_atom_site.label_alt_id' in indices else '.'
                     b_factor = float(parts[indices['_atom_site.B_iso_or_equiv']]) if '_atom_site.B_iso_or_equiv' in indices else 0.0
                     model_num = int(parts[indices['_atom_site.pdbx_PDB_model_num']]) if '_atom_site.pdbx_PDB_model_num' in indices else 1
+
+                    # Exclude hydrogen atoms (common convention is for atom name to start with 'H')
+                    if atom_name.startswith('H'):
+                        continue
 
                     if alt_loc == '.':
                         alt_loc = ''
@@ -315,9 +336,7 @@ class FastParser:
 
                 except (ValueError, IndexError):
                     continue
-
                 key = (model_num, chain, res_id, res_name)
-
                 if self.use_centroid:
                     centroid_buffer[key].append([x, y, z, atom_name, alt_loc, b_factor])
                 elif self.keep_all or atom_name in self.target_atoms:
