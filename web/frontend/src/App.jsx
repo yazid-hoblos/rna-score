@@ -9,7 +9,7 @@ function App() {
   return (
     <div className="App">
       <header className="header">
-        <h1>🧬 RNA Score Web Interface</h1>
+        <h1>🧬 RNA Score Web Interface 🧬</h1>
         <p>Extract distances, train models, and score RNA structures</p>
       </header>
 
