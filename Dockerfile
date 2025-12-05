@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Build frontend
 WORKDIR /app/web/frontend
 RUN npm install
-RUN npx vite build
+RUN chmod -R 755 node_modules/.bin && npm run build
 
 # Back to root
 WORKDIR /app
