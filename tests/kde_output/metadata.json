@@ -1,0 +1,11 @@
+{
+  "raw_dir": "data\\dist_data_kde",
+  "output_dir": "data\\kde_output",
+  "max_distance": 20.0,
+  "grid_step": 0.1,
+  "kernel": "gaussian",
+  "bandwidth": "SJ-dpi",
+  "adjust": 1.0,
+  "cut": 3.0,
+  "backend": "python"
+}

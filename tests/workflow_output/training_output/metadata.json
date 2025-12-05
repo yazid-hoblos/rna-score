@@ -1,0 +1,21 @@
+{
+  "input_dir": "tests/workflow_output/extracted",
+  "output_dir": "tests/workflow_output/training_output",
+  "max_score": 10.0,
+  "pseudocount": 0.0,
+  "cutoff": 20.0,
+  "bin_width": 1.0,
+  "n_bins": 20,
+  "pairs": [
+    "AA",
+    "AC",
+    "AG",
+    "AU",
+    "CC",
+    "CG",
+    "GG",
+    "CU",
+    "GU",
+    "UU"
+  ]
+}
