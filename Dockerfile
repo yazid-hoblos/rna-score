@@ -23,7 +23,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Build frontend
 WORKDIR /app/web/frontend
 RUN npm install
-RUN ./node_modules/.bin/vite build
+RUN ls -la node_modules/.bin/vite || echo "vite not found"
+RUN node node_modules/vite/bin/vite.js build
 
 # Back to root
 WORKDIR /app
