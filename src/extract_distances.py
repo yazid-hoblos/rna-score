@@ -43,7 +43,7 @@ Parameters / Command-line options:
         - Single atom name (e.g., "C3'")
         - "centroid" for nucleotide centroid
         - "all" for all atoms
-        - list of atom names
+        - list of atom names (e.g., "C3'" "P" "O")
       Default: ["C3'"]
 
   --dist-mode {intra,inter}

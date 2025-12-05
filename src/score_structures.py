@@ -84,6 +84,7 @@ class ScoringTables:
         return f"{res1}{res2}"
 
 
+
 def parse_structure(filepath, file_format='pdb', atom_mode="C3'"):
     """Parse structure file and extract distance data."""
     try:
