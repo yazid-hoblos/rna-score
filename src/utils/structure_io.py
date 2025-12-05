@@ -6,24 +6,24 @@ This module provides tools to fetch and parse RNA structures from PDB and mmCIF 
 Main Components:
 ----------------
 1. OnlineFetcher:
-   - Downloads PDB or mmCIF files from the RCSB Protein Data Bank (in-memory).
-   - Returns the file content as a list of lines.
+   - Downloads PDB or mmCIF files from the RCSB Protein Data Bank (in-memory).
+   - Returns the file content as a list of lines.
 
 2. FastParser:
-   - Efficiently parses PDB or mmCIF files.
-   - Supports filtering by chain, atom type, and models.
-   - Supports extracting specific atoms, all atoms, or centroids per residue.
-   - Returns structured arrays containing coordinates, residue info, atom info, 
-     chain IDs, model IDs, and B-factors.
+   - Efficiently parses PDB or mmCIF files.
+   - Supports filtering by chain, atom type, and models.
+   - Supports extracting specific atoms, all atoms, or centroids per residue.
+   - Returns structured arrays containing coordinates, residue info, atom info, 
+     chain IDs, model IDs, and B-factors.
 
 Workflow Example:
 -----------------
 1. Fetch RNA structure:
-    lines = OnlineFetcher.get_content('1ABC', file_format='pdb')
+    lines = OnlineFetcher.get_content('1ABC', file_format='pdb')
 
 2. Parse structure:
-    parser = FastParser(atom_mode="C3'")
-    data = parser.parse(lines, file_format='pdb', pdb_name='1ABC')
+    parser = FastParser(atom_mode="C3'")
+    data = parser.parse(lines, file_format='pdb', pdb_name='1ABC')
 
 Dependencies:
 -------------
@@ -93,6 +93,8 @@ class FastParser:
         """
         if not atom_name:
             return atom_name
+        # Note: The original normalization included .replace("'", "'").
+        # Standard PDB atom names like C3' use a prime/asterisk. This ensures it's handled.
         normalized = atom_name.strip().replace('"', '').replace("'", "'").replace('*', "'")
         return normalized
     
@@ -183,6 +185,10 @@ class FastParser:
             res_name = line[17:20].strip()
             chain = line[21].strip()
             
+            # Exclude hydrogen atoms (common convention is for atom name to start with 'H')
+            if atom_name.startswith('H'):
+                continue
+
             if res_name not in self.allowed_bases:
                 continue
             if chains_filter and chain not in chains_filter:
@@ -317,6 +323,10 @@ class FastParser:
                     alt_loc = parts[indices.get('_atom_site.label_alt_id', 0)] if '_atom_site.label_alt_id' in indices else '.'
                     b_factor = float(parts[indices['_atom_site.B_iso_or_equiv']]) if '_atom_site.B_iso_or_equiv' in indices else 0.0
                     model_num = int(parts[indices['_atom_site.pdbx_PDB_model_num']]) if '_atom_site.pdbx_PDB_model_num' in indices else 1
+
+                    # Exclude hydrogen atoms (common convention is for atom name to start with 'H')
+                    if atom_name.startswith('H'):
+                        continue
 
                     if alt_loc == '.':
                         alt_loc = ''
