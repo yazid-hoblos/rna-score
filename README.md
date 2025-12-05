@@ -17,6 +17,22 @@ rna-score provides tools to download, process, and score RNA 3D structures using
 
 ---
 
+## Features Supported for Distances Computation
+
+| Component           | Description                                                         | CLI Option                                   | Details                                                                                                                                                                           |
+|---------------------|---------------------------------------------------------------------|-----------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Input Source**    | Select the structure(s) to process, either remote or local.         | `--pdb`, `--list`, `--folder`                 | Choose **one**: a PDB ID, a local file, a list file (`<ID> [CHAIN ...]`), or a directory of structures.                                                                          |
+| **Input Format**    | Specify the format used for parsing the structure.                  | `--format {pdb, mmcif}`                       | Default: **pdb**. Automatically detected for local files.                                                                                                                         |
+| **Atomic Selection**| Choose how the structure is represented for distance calculations.| `--atom-mode`                                 | Options: **"C3'"** (default), **centroid**, **all**, or multiple atom names (e.g., `"P" "C4"`).                                                                                     |
+| **Interaction Mode**| Determine whether distances are measured within or between chains.  | `--dist-mode {intra, inter}`                  | **intra** (default): within one chain. **inter**: between distinct chains.                                                                                                       |
+| **Sequence Separation** | Minimum offset for intra-chain contacts.                        | `--seq-sep SEQ_SEP`                           | Default: **4** residues. Ignored in *inter* mode. Distances considered from *i* to *i+4*.                                                                                         |
+| **Distance Cutoff** | Maximum atom–atom distance (Å) counted as a contact.                | `--cutoff CUTOFF`                             | Default: **20.0 Å**.                                                                                                                                                              |
+| **Output Type**     | Determines the type of distance distribution produced.              | `--method {histogram, kde}`                   | **histogram** (default): binned counts. **kde**: raw distances for kernel density estimation.                                                                                     |
+| **Parallelization** | Control how many CPU cores to use.                                  | `--cores CORES`                               | Default: all available cores.                                                                                                                                                     |
+| **NMR Models**      | Whether to process all models in NMR structures.                    | `--all-models`                                | Default: only the first model is used.                                                                                                                                            |
+| **Detailed Log**    | Save a CSV file with full information for every measured distance.  | `--save-detailed`                             | Saves: **PDB**, **Model**, **Chain IDs**, **Residue IDs**, **Atom Names**, **B-factors**, **AltLocs**, **Distance**, and **Pair Type**.                                          |
+| **Output Directory**| Location where results will be written.                             | `--out-dir OUT_DIR`                           | Default: `dist_data/`.                                                                                                                                                            |
+
 ## Code Structure
 
 - **`src/`**  
@@ -78,6 +94,7 @@ rna-score score --folder rna_structures/mmcif --tables training_output --format 
 
 ```bash
 rna-score plot --input-dir training_output --output-dir plots --combined
+```
 
 ### 6. Full Workflow (all steps in one command)
 
