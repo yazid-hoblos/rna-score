@@ -151,6 +151,9 @@ def run_full_pipeline(job_id: str, train_file: str, score_file: str, atom_mode: 
     """Background task: Run full pipeline (extract train → train → score test → plot)."""
     try:
         job_dir = get_job_dir(job_id)
+        print(f"[{job_id}] Starting pipeline. Project root: {PROJECT_ROOT}, SRC_DIR: {SRC_DIR}")
+        print(f"[{job_id}] SRC_DIR exists: {SRC_DIR.exists()}")
+        print(f"[{job_id}] extract_distances.py exists: {(SRC_DIR / 'extract_distances.py').exists()}")
         
         # Step 1: Extract from training data
         save_job_status(job_id, JobStatus.RUNNING, "Step 1/4: Extracting distances from training data...")
@@ -159,6 +162,7 @@ def run_full_pipeline(job_id: str, train_file: str, score_file: str, atom_mode: 
         
         # Determine if input is a list file or a single structure file
         is_list_file = train_file.endswith('.txt')
+        print(f"[{job_id}] Training file: {train_file}, is_list: {is_list_file}")
         
         cmd = [
             sys.executable,
@@ -173,7 +177,14 @@ def run_full_pipeline(job_id: str, train_file: str, score_file: str, atom_mode: 
             "--out-dir", str(extract_dir)
         ]
         
+        print(f"[{job_id}] Running: {' '.join(cmd)}")
         result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROJECT_ROOT), timeout=300)
+        print(f"[{job_id}] Extract returncode: {result.returncode}")
+        if result.stdout:
+            print(f"[{job_id}] Extract stdout: {result.stdout}")
+        if result.stderr:
+            print(f"[{job_id}] Extract stderr: {result.stderr}")
+        
         if result.returncode != 0:
             raise Exception(f"Extraction failed: {result.stderr}")
         
@@ -240,9 +251,15 @@ def run_full_pipeline(job_id: str, train_file: str, score_file: str, atom_mode: 
         save_job_status(job_id, JobStatus.COMPLETED, "Pipeline complete!")
     
     except subprocess.TimeoutExpired as e:
-        save_job_status(job_id, JobStatus.FAILED, "", error=f"Step timed out after 5 minutes: {str(e)}")
+        error_msg = f"Step timed out after 5 minutes: {str(e)}"
+        print(f"[{job_id}] TIMEOUT: {error_msg}")
+        save_job_status(job_id, JobStatus.FAILED, "", error=error_msg)
     except Exception as e:
-        save_job_status(job_id, JobStatus.FAILED, "", error=str(e))
+        error_msg = str(e)
+        print(f"[{job_id}] ERROR: {error_msg}")
+        import traceback
+        print(f"[{job_id}] Traceback: {traceback.format_exc()}")
+        save_job_status(job_id, JobStatus.FAILED, "", error=error_msg)
 
 
 @app.get("/api/job/{job_id}/results")
