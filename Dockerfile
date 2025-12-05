@@ -24,6 +24,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 WORKDIR /app/web/frontend
 RUN npm install
 RUN ls -la node_modules/.bin/vite || echo "vite not found"
+# Ensure esbuild binary is executable (fixes EACCES on Render/Debian slim)
+RUN chmod +x node_modules/@esbuild/linux-x64/bin/esbuild
 RUN node node_modules/vite/bin/vite.js build
 
 # Back to root
