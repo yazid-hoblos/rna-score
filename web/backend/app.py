@@ -11,10 +11,14 @@ from typing import Optional, List
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import uuid
 import json
 
 app = FastAPI(title="RNA Score API", version="1.0.0")
+
+# Path to built frontend (Vite build output)
+FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 
 # Add CORS middleware
 app.add_middleware(
@@ -24,6 +28,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve built frontend if present
+if FRONTEND_DIST.exists():
+    app.mount(
+        "/",
+        StaticFiles(directory=str(FRONTEND_DIST), html=True),
+        name="frontend",
+    )
 
 # Base directory for temporary job data
 JOBS_DIR = Path("./jobs")
@@ -68,10 +80,10 @@ def get_job_status(job_id: str) -> dict:
     return {"status": JobStatus.PENDING, "message": "", "error": ""}
 
 
-@app.get("/")
-async def root():
+@app.get("/api/health")
+async def health():
     """Health check endpoint."""
-    return {"message": "RNA Score API is running"}
+    return {"status": "ok"}
 
 
 @app.get("/api/job/{job_id}/status")
@@ -503,6 +515,18 @@ def run_score(job_id: str, structures_dir: str, tables_dir: str, cutoff: float, 
     
     except Exception as e:
         save_job_status(job_id, JobStatus.FAILED, "", error=str(e))
+
+
+# SPA fallback: serve frontend for non-API routes
+@app.get("/{full_path:path}")
+async def spa_fallback(full_path: str):
+    """Serve index.html for any non-API route (supports client-side routing)."""
+    if full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="Not Found")
+    index_file = FRONTEND_DIST / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
+    raise HTTPException(status_code=404, detail="Not Found")
 
 
 if __name__ == "__main__":
