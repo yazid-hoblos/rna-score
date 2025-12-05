@@ -29,14 +29,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve built frontend if present
-if FRONTEND_DIST.exists():
-    app.mount(
-        "/",
-        StaticFiles(directory=str(FRONTEND_DIST), html=True),
-        name="frontend",
-    )
-
 # Base directory for temporary job data
 JOBS_DIR = Path("./jobs")
 JOBS_DIR.mkdir(exist_ok=True)
@@ -545,12 +537,20 @@ def run_score(job_id: str, structures_dir: str, tables_dir: str, cutoff: float, 
 # SPA fallback: serve frontend for non-API routes
 @app.get("/{full_path:path}")
 async def spa_fallback(full_path: str):
-    """Serve index.html for any non-API route (supports client-side routing)."""
+    """Serve static files or index.html for client-side routing."""
     if full_path.startswith("api/"):
         raise HTTPException(status_code=404, detail="Not Found")
+    
+    # Try to serve the file directly
+    file_path = FRONTEND_DIST / full_path
+    if file_path.exists() and file_path.is_file():
+        return FileResponse(file_path)
+    
+    # Fall back to index.html for client-side routing
     index_file = FRONTEND_DIST / "index.html"
     if index_file.exists():
         return FileResponse(index_file)
+    
     raise HTTPException(status_code=404, detail="Not Found")
 
 
