@@ -27,17 +27,26 @@ def load_score_table(filepath):
     if not os.path.exists(filepath):
         return None
     
+    if 'kde' in filepath:
+        # Load KDE data
+        data = np.loadtxt(filepath, delimiter=',', skiprows=1)
+        print()
+        return {
+            'distance': data[:, 0],
+            'score': data[:, 1]
+        }
+    
     data = np.loadtxt(filepath, delimiter=',', skiprows=1)
     return {
         'distance_min': data[:, 0],
         'distance_max': data[:, 1],
-        'distance_mid': data[:, 2],
+        'distance': data[:, 2],
         'score': data[:, 3]
     }
 
 def plot_single_profile(pair, score_data, output_path):
     sns.set_theme(style="whitegrid")
-    x = score_data['distance_mid']
+    x = score_data['distance']
     y = score_data['score']
     cmap = plt.get_cmap('plasma')
     norm = Normalize(vmin=np.min(y), vmax=np.max(y))
@@ -70,7 +79,7 @@ def plot_single_profile(pair, score_data, output_path):
     
 
 def plot_single_profile_plotly(pair, score_data, output_path):
-    x = score_data['distance_mid']
+    x = score_data['distance']
     y = score_data['score']
     y_norm = (y - np.min(y)) / (np.max(y) - np.min(y))
     segment_colors = sample_colorscale('Plasma', y_norm)
@@ -99,24 +108,116 @@ def plot_single_profile_plotly(pair, score_data, output_path):
 
 
 def plot_combined_profiles(pairs_data, output_path):
-    """Plot all base pair profiles in a single figure."""
-    fig, axes = plt.subplots(2, 5, figsize=(20, 8))
-    axes = axes.flatten()
+    fig = go.Figure()
+    pair_names = list(pairs_data.keys())
     
-    for idx, (pair, score_data) in enumerate(pairs_data.items()):
-        ax = axes[idx]
-        x = score_data['distance_mid']
+    # Add traces for all pairs but make them invisible initially
+    for pair in pair_names:
+        score_data = pairs_data[pair]
+        x = score_data['distance']
         y = score_data['score']
-        ax.plot(x, y, 'o-', linewidth=2, markersize=3)
-        ax.set_xlabel('Distance (Å)', fontsize=10)
-        ax.set_ylabel('Score', fontsize=10)
-        ax.set_title(pair, fontsize=12, fontweight='bold')
-        ax.grid(True, alpha=0.3)
-        ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.5)
+        y_norm = (y - np.min(y)) / (np.max(y) - np.min(y))
+        segment_colors = sample_colorscale('Plasma', y_norm)
+        
+        for i in range(len(x) - 1):
+            fig.add_trace(
+                go.Scatter(
+                    x=x[i:i+2],
+                    y=y[i:i+2],
+                    mode='lines+markers',
+                    line=dict(color=segment_colors[i], width=3),
+                    marker=dict(color=segment_colors[i], size=6),
+                    name=pair,
+                    visible=False,
+                    hoverinfo='x+y+name'
+                )
+            )
     
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=150, bbox_inches='tight')
-    plt.close()
+    # Make the first pair visible by default
+    num_segments = [len(pairs_data[p]) - 1 for p in pair_names]
+    start = 0
+    for count in num_segments:
+        for i in range(start, start + count):
+            fig.data[i].visible = True
+        break  # only the first pair
+        start += count
+    
+    # Create buttons for each pair
+    buttons = []
+    start_idx = 0
+    for idx, pair in enumerate(pair_names):
+        visible = [False] * len(fig.data)
+        count = num_segments[idx]
+        for i in range(start_idx, start_idx + count):
+            visible[i] = True
+        start_idx += count
+        buttons.append(
+            dict(
+                label=pair,
+                method='update',
+                args=[{'visible': visible},
+                      {'title': f'Scoring Profile: {pair}'}]
+            )
+        )
+    
+    fig.update_layout(
+        updatemenus=[dict(active=0, buttons=buttons, x=1.05, y=0.8)],
+        xaxis_title='Distance (Å)',
+        yaxis_title='Pseudo-energy Score',
+        template='plotly_white',
+        hovermode='closest',
+        showlegend=False
+    )
+    
+    fig.write_html(output_path)
+    return fig
+
+
+def plot_combined_profiles_plotly(pairs_data, output_path):
+    """
+    Plot multiple base pair profiles in a single Plotly figure with colored segments.
+    
+    Args:
+        pairs_data (dict): Dictionary with pair names as keys and score_data (DataFrame) as values.
+        output_path (str): Path to save the HTML figure.
+    
+    Returns:
+        fig (go.Figure): Plotly figure object.
+    """
+    fig = go.Figure()
+    
+    for pair, score_data in pairs_data.items():
+        x = score_data['distance']
+        y = score_data['score']
+        y_norm = (y - np.min(y)) / (np.max(y) - np.min(y))
+        segment_colors = sample_colorscale('Plasma', y_norm)
+        
+        for i in range(len(x) - 1):
+            fig.add_trace(
+                go.Scatter(
+                    x=x[i:i+2],
+                    y=y[i:i+2],
+                    mode='lines+markers',
+                    line=dict(color=segment_colors[i], width=3),
+                    marker=dict(color=segment_colors[i], size=6),
+                    name=pair if i == 0 else None,  # show legend only once per pair
+                    hoverinfo='x+y+name'
+                )
+            )
+    
+    fig.update_layout(
+        title='Combined Scoring Profiles',
+        xaxis_title='Distance (Å)',
+        yaxis_title='Pseudo-energy Score',
+        template='plotly_white',
+        hovermode='closest',
+        legend_title='Pairs'
+    )
+    
+    fig.write_html(output_path)
+    return fig
+
+
 
 
 def main():
@@ -183,6 +284,10 @@ def main():
             output_path = os.path.join(args.output_dir, 'html', f'{pair}_profile.html')
             plot_single_profile_plotly(pair, score_data, output_path)
             print(f"  ✓ Plotted {pair} (Plotly)")
+        if args.combined:
+            combined_path = os.path.join(args.output_dir, 'html', 'all_profiles.html')
+            plot_combined_profiles_plotly(pairs_data, combined_path)
+            print(f"  ✓ Generated combined plot (Plotly)")
     
     print(f"\n✓ Plotting complete!")
     print(f"  Generated {len(pairs_data)} individual plots")
